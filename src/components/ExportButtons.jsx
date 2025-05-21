@@ -44,21 +44,71 @@ export default function ExportButtons({ resultado }) {
     try {
       const wb = XLSX.utils.book_new();
       
-      // Función para convertir array a hoja
-      const hoja = (arr, nombre) => {
+      // Función para convertir array a hoja de Excel
+      const crearHoja = (arr, nombre) => {
         if (arr && arr.length > 0) {
           // Normalizar datos para el reporte
-          let datos = arr;
+          let datos = [];
           
           if (nombre === 'Exactas') {
             // Las coincidencias exactas tienen una estructura anidada
             datos = arr.map(item => ({
-              ...item.sistema,
-              banco_referencia: item.banco.referencia,
-              banco_fecha: item.banco.fecha,
-              banco_debito: item.banco.debito,
-              banco_credito: item.banco.credito,
-              banco_descripcion: item.banco.descripcion
+              sistema: item.sistema.referencia || 'N/A',
+              banco: item.banco.referencia || 'N/A',
+              diferencia: 0,
+              // Incluir todos los campos detallados
+              sistema_fecha: item.sistema.fecha || 'N/A',
+              sistema_referencia: item.sistema.referencia || 'N/A',
+              sistema_debito: item.sistema.debito || '0',
+              sistema_credito: item.sistema.credito || '0',
+              sistema_descripcion: item.sistema.descripcion || 'N/A',
+              banco_fecha: item.banco.fecha || 'N/A',
+              banco_referencia: item.banco.referencia || 'N/A',
+              banco_debito: item.banco.debito || '0',
+              banco_credito: item.banco.credito || '0',
+              banco_descripcion: item.banco.descripcion || 'N/A'
+            }));
+          } else if (nombre === 'Aproximadas') {
+            // Las coincidencias aproximadas tienen una estructura similar con diferencia
+            datos = arr.map(item => ({
+              sistema: item.sistema.referencia || 'N/A',
+              banco: item.banco.referencia || 'N/A',
+              diferencia: item.diferencia || 0,
+              // Incluir todos los campos detallados
+              sistema_fecha: item.sistema.fecha || 'N/A',
+              sistema_referencia: item.sistema.referencia || 'N/A',
+              sistema_debito: item.sistema.debito || '0',
+              sistema_credito: item.sistema.credito || '0',
+              sistema_descripcion: item.sistema.descripcion || 'N/A',
+              banco_fecha: item.banco.fecha || 'N/A',
+              banco_referencia: item.banco.referencia || 'N/A',
+              banco_debito: item.banco.debito || '0',
+              banco_credito: item.banco.credito || '0',
+              banco_descripcion: item.banco.descripcion || 'N/A'
+            }));
+          } else if (nombre === 'SinCoincidencia') {
+            // Registros sin coincidencia solo tienen datos del sistema
+            datos = arr.map(item => ({
+              sistema: item.referencia || 'N/A',
+              banco: 'N/A',
+              diferencia: 'N/A',
+              sistema_fecha: item.fecha || 'N/A',
+              sistema_referencia: item.referencia || 'N/A',
+              sistema_debito: item.debito || '0',
+              sistema_credito: item.credito || '0',
+              sistema_descripcion: item.descripcion || 'N/A'
+            }));
+          } else if (nombre === 'BancoNoUsados') {
+            // Registros de banco no utilizados
+            datos = arr.map(item => ({
+              sistema: 'N/A',
+              banco: item.referencia || 'N/A',
+              diferencia: 'N/A',
+              banco_fecha: item.fecha || 'N/A',
+              banco_referencia: item.referencia || 'N/A',
+              banco_debito: item.debito || '0',
+              banco_credito: item.credito || '0',
+              banco_descripcion: item.descripcion || 'N/A'
             }));
           }
           
@@ -67,11 +117,19 @@ export default function ExportButtons({ resultado }) {
           
           // Agregar estilos y formato
           const colWidths = [
-            { wch: 15 }, // Referencia
-            { wch: 12 }, // Fecha
-            { wch: 12 }, // Débito
-            { wch: 12 }, // Crédito
-            { wch: 30 }, // Descripción
+            { wch: 15 }, // sistema
+            { wch: 15 }, // banco
+            { wch: 10 }, // diferencia
+            { wch: 12 }, // fecha sistema
+            { wch: 15 }, // referencia sistema
+            { wch: 12 }, // débito sistema
+            { wch: 12 }, // crédito sistema
+            { wch: 30 }, // descripción sistema
+            { wch: 12 }, // fecha banco
+            { wch: 15 }, // referencia banco
+            { wch: 12 }, // débito banco
+            { wch: 12 }, // crédito banco
+            { wch: 30 }, // descripción banco
           ];
           
           ws['!cols'] = colWidths;
@@ -82,12 +140,12 @@ export default function ExportButtons({ resultado }) {
       };
       
       // Crear hojas para cada tipo de resultado
-      hoja(resultado.coincidenciasExactas, 'Exactas');
-      hoja(resultado.coincidenciasAproximadas, 'Aproximadas');
-      hoja(resultado.sinCoincidencia, 'SinCoincidencia');
+      crearHoja(resultado.coincidenciasExactas, 'Exactas');
+      crearHoja(resultado.coincidenciasAproximadas, 'Aproximadas');
+      crearHoja(resultado.sinCoincidencia, 'SinCoincidencia');
       
       if (resultado.registrosBancoNoUtilizados) {
-        hoja(resultado.registrosBancoNoUtilizados, 'BancoNoUsados');
+        crearHoja(resultado.registrosBancoNoUtilizados, 'BancoNoUsados');
       }
       
       // Añadir hoja de resumen
@@ -179,12 +237,11 @@ export default function ExportButtons({ resultado }) {
       
       autoTable(doc, {
         startY: startY + 5,
-        head: [['Referencia', 'Fecha', 'Débito', 'Crédito', 'Descripción']],
+        head: [['Ref. Sistema', 'Ref. Banco', 'Diferencia', 'Descripción']],
         body: resultado.coincidenciasExactas.map(r => [
           r.sistema.referencia || '', 
-          r.sistema.fecha || '', 
-          r.sistema.debito || '', 
-          r.sistema.credito || '', 
+          r.banco.referencia || '', 
+          '0.00',
           r.sistema.descripcion || ''
         ]),
         headStyles: { fillColor: [76, 175, 80] }
@@ -200,13 +257,12 @@ export default function ExportButtons({ resultado }) {
         
         autoTable(doc, {
           startY: startY > 180 ? 25 : startY + 5,
-          head: [['Referencia', 'Fecha', 'Débito', 'Crédito', 'Descripción']],
+          head: [['Ref. Sistema', 'Ref. Banco', 'Diferencia', 'Descripción']],
           body: resultado.coincidenciasAproximadas.map(r => [
-            r.referencia || '', 
-            r.fecha || '', 
-            r.debito || '', 
-            r.credito || '', 
-            r.descripcion || ''
+            r.sistema.referencia || '', 
+            r.banco.referencia || '', 
+            r.diferencia.toFixed(2), 
+            r.sistema.descripcion || ''
           ]),
           headStyles: { fillColor: [255, 193, 7] }
         });
