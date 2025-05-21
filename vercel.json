@@ -1,11 +1,13 @@
 {
-  "version": 2,
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
   "builds": [
     {
       "src": "package.json",
-      "use": "@vercel/node",
+      "use": "@vercel/static-build",
       "config": {
-        "installCommand": "npm install --save-dev vite-plugin-pwa && npm install"
+        "distDir": "dist"
       }
     }
   ]
